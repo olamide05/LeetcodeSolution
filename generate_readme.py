@@ -1,53 +1,69 @@
 import os
+import re
 
-# Tags you're using
-TAGS = ["arrays", "hashing", "stacks", "two-pointers", "binary-search"]
+LEETCODE_URL = "https://leetcode.com/problems/"
 
-# Track stats
-total = 0
-stats = {tag: 0 for tag in TAGS}
+def get_solution_files():
+    """Finds all Python files in the current directory, excluding this script."""
+    files = []
+    for filename in os.listdir('.'):
+        if filename.endswith(".py") and filename != "generate_readme.py":
+            files.append(filename)
+    return files
 
-# Count .java files per tag
-for tag in TAGS:
-    path = os.path.join(".", tag)
-    if os.path.exists(path):
-        files = [f for f in os.listdir(path) if f.endswith(".java")]
-        stats[tag] = len(files)
-        total += stats[tag]
+def extract_details_from_file(filename):
+    """Extracts problem details from comments inside the Python file."""
+    with open(filename, 'r') as f:
+        content = f.read()
 
-# Optional: categorize by difficulty manually
-easy = medium = hard = "XX"
+        # Regex to find details like: # 1. Two Sum | Difficulty: Easy
+        match = re.search(r"#\s*(\d+)\.\s*(.*?)\s*\|\s*Difficulty:\s*(Easy|Medium|Hard)", content)
 
-# Generate README content
-readme = f"""<h1 align="center">🧠 LeetCode Java Solutions</h1>
+        if not match:
+            return None
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Language-Java-orange?style=for-the-badge&logo=java" />
-  <img src="https://img.shields.io/badge/Problems%20Solved-{total}+-brightgreen?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Organized%20By-Tags-blueviolet?style=for-the-badge" />
-</p>
+        number = int(match.group(1))
+        title = match.group(2).strip()
+        difficulty = match.group(3).strip()
 
-<p align="center">
-  Welcome to my curated collection of <strong>LeetCode Java solutions</strong>, organized by core algorithmic patterns and tags.<br>
-  Built for learning, reviewing, and mastering DSA techniques — one problem at a time.
-</p>
+        # Create a URL-friendly slug from the title
+        title_slug = title.lower().replace(' ', '-')
 
----
+        return {
+            "number": number,
+            "title": title,
+            "difficulty": difficulty,
+            "url": f"{LEETCODE_URL}{title_slug}/",
+            "solution_file": filename
+        }
 
-## 📚 Table of Contents
+def main():
+    """Generates the README.md file."""
+    solution_files = get_solution_files()
+    solutions = []
 
-- [📁 Folder Structure](#-folder-structure)
-- [🏷️ Tags Covered](#️-tags-covered)
-- [📈 Progress](#-progress)
-- [🛠️ Tools Used](#️-tools-used)
-- [🔗 Useful Links](#-useful-links)
-- [📜 Disclaimer](#-disclaimer)
+    for filename in solution_files:
+        details = extract_details_from_file(filename)
+        if details:
+            solutions.append(details)
 
----
+    # Sort solutions by problem number
+    solutions.sort(key=lambda x: x['number'])
 
-## 📁 Folder Structure
+    # Write to README.md
+    with open("README.md", "w") as f:
+        f.write("# LeetCode Solutions in Python\n\n")
+        f.write("A repository of my solutions to LeetCode problems.\n\n")
+        f.write("| # | Title | Solution | Difficulty |\n")
+        f.write("|---| ----- | -------- | ---------- |\n")
 
-```bash
-.
-{chr(10).join([f"├── {tag}/" for tag in TAGS])}
-└── README.md
+        for s in solutions:
+            title_link = f"[{s['title']}]({s['url']})"
+            solution_link = f"[Python](./{s['solution_file']})"
+            f.write(f"| {s['number']} | {title_link} | {solution_link} | {s['difficulty']} |\n")
+
+    print(f"✅ README.md generated successfully with {len(solutions)} solutions.")
+
+
+if __name__ == "__main__":
+    main()
